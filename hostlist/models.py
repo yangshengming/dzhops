@@ -40,12 +40,12 @@ class Catagory(models.Model):
         return u'%s %s' %(self.catagoryen, self.catagorycn)
 
 class HostList(models.Model):
-    ip = models.CharField(max_length=15,  blank=True,verbose_name=u'IP地址')
+    ip = models.CharField(max_length=15, verbose_name=u'IP地址')
     hostname = models.CharField(max_length=30, verbose_name=u'主机名')
     minionid = models.CharField(max_length=60, verbose_name=u'MinionID')
-    nocn = models.CharField(max_length=30, verbose_name=u'运营商全称')
+    nocn = models.CharField(max_length=30, blank=True, verbose_name=u'运营商全称')
     catagorycn = models.CharField(max_length=30, blank=True, verbose_name=u'类别')
-    pacn = models.CharField(max_length=30, verbose_name=u'地区全称')
+    pacn = models.CharField(max_length=30, blank=True, verbose_name=u'地区全称')
     dccn = models.CharField(max_length=30, blank=True, verbose_name=u'机房全称')
     engineer = models.CharField(max_length=30, blank=True, verbose_name=u'维护人员')
     macaddr = models.CharField(max_length=20,  blank=True,verbose_name=u'MAC地址')
