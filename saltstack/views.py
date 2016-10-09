@@ -402,3 +402,139 @@ def remoteExecuteApi(request):
     ret_json = json.dumps(result_dict)
 
     return HttpResponse(ret_json, content_type='application/json')
+
+@login_required
+def pingTest(request):
+    '''
+    通过SaltStack test.ping模块，测试与Salt minion之间的连接;
+    :param request: None
+    :return:
+    '''
+    user = request.user.username
+    dcen_list = []
+    data_centers = {}
+
+    result_dc = DataCenter.objects.all()
+    for dc in result_dc:
+        dcen_list.append(dc.dcen)
+        data_centers[dc.dcen] = dc.dccn
+    dcen_list.sort()
+
+    return render(
+        request,
+        'salt_ping.html',
+        {'dcen_list': dcen_list, 'data_centers': data_centers}
+    )
+
+@login_required
+def pingTestApi(request):
+    '''
+    测试连接功能，前端页面提交的数据由该函数处理，执行完毕后返回json格式数据到api；
+    :param request:
+    :return:
+    '''
+    user = request.user.username
+    salt_module = 'test.ping'
+    get_errors = []
+    errors = []
+    result_dict = {}
+
+    if request.method == 'GET':
+        check_tgt = request.GET.get('tgt', '')
+        check_dc_list = request.GET.get('datacenter', '')
+
+        module_detection = moduleDetection(salt_module, user)
+
+        if module_detection:
+            get_errors.append(module_detection)
+            log.debug('{0}'.format(str(module_detection)))
+        if not (check_tgt or check_dc_list):
+            get_errors.append(u'需要输入服务器IP或选择机房！')
+            log.error('Did not enter servers ip or choose data center.')
+
+        if get_errors:
+            for error in get_errors:
+                errors.append(error.encode('utf-8'))
+            result_dict['errors'] = errors
+        else:
+            tgt = request.GET.get('tgt', '')
+            dc = request.GET.get('datacenter', '')
+
+            dc_clean = dc.strip(',')
+            log.debug(str(dc_clean))
+            dc_list = dc_clean.split(',')
+            target_list = tgt.split(',')
+            tgt_mixture_list = copy.deepcopy(dc_list)
+            tgt_mixture_list.extend(target_list)
+
+            if tgt:
+                minion_id_from_tgt_set = targetToMinionID(tgt)
+            else:
+                minion_id_from_tgt_set = set([])
+            if dc:
+                log.debug(str(dc_list))
+                minion_id_from_dc_set = datacenterToMinionID(dc_list)
+            else:
+                minion_id_from_dc_set = set([])
+            all_minion_id_set = minion_id_from_tgt_set.union(minion_id_from_dc_set)
+            # log.debug('The all target minion id set: {0}'.format(str(all_minion_id_set)))
+
+            if all_minion_id_set:
+                sapi = SaltAPI(
+                    url=settings.SALT_API['url'],
+                    username=settings.SALT_API['user'],
+                    password=settings.SALT_API['password'])
+
+                module_lock = moduleLock(salt_module, user)
+
+                if '*' in tgt_mixture_list:
+                    jid = sapi.asyncMasterToMinion('*', salt_module)
+                else:
+                    tgt_list_to_str = ','.join(list(all_minion_id_set))
+                    jid = sapi.asyncMasterToMinion(tgt_list_to_str, salt_module)
+
+                if dc_list:
+                    operate_tgt = dc_list[0]
+                elif tgt:
+                    operate_tgt = target_list[0]
+                else:
+                    operate_tgt = 'unknown'
+
+                op_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
+                #op_user = arg
+                op_tgt = '%s...' % operate_tgt
+                p1 = OperateRecord.objects.create(
+                    nowtime=op_time,
+                    username=user,
+                    #user_operate=op_user,
+                    simple_tgt=op_tgt,
+                    jid=jid)
+
+                find_job = findJob(all_minion_id_set, jid)
+                result = mysqlReturns(jid)
+                module_unlock = moduleUnlock(salt_module, user)
+                ret, hostfa, hosttr = outFormat(result)
+
+                # log.debug(str(ret))
+                recv_ips_list = ret.keys()
+                send_recv_info = manageResult(all_minion_id_set, recv_ips_list)
+                send_recv_info['succeed'] = hosttr
+                send_recv_info['failed'] = hostfa
+                saveRecord = ReturnRecord.objects.create(
+                    jid=jid,
+                    tgt_total=send_recv_info['send_count'],
+                    tgt_ret=send_recv_info['recv_count'],
+                    tgt_succ=send_recv_info['succeed'],
+                    tgt_fail=send_recv_info['failed'],
+                    tgt_unret=send_recv_info['unrecv_count'],
+                    tgt_unret_list=send_recv_info['unrecv_strings']
+                )
+                result_dict['result'] = ret
+                result_dict['info'] = send_recv_info
+            else:
+                log.info('The all target minion id set is Null.')
+                set_null = u'数据库中没有找到输入的主机，请确认输入是否正确！'
+                result_dict['errors'] = set_null.encode('utf-8')
+    ret_json = json.dumps(result_dict)
+
+    return HttpResponse(ret_json, content_type='application/json')

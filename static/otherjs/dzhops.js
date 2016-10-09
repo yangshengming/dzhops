@@ -319,3 +319,49 @@ function repairHistoryData() {
         $("#submit_history").html("提交");
     });
 }
+
+function saltPing() {
+// $.ajaxSettings.async = false;
+    $(document).ready(function(){
+        $('#result').html("");
+        $('#info').html("")
+        var tgt = $("input[name='tgt']").val();
+        var datacenter = "";
+        $('input[name="datacenter"]:checked').each(function(){
+            datacenter += $(this).val() + ',';
+        });
+        if ((tgt === '' || tgt === null) && (datacenter === '' || datacenter === null)) {
+            alert('请输入服务器IP或选择对应机房！');
+            return false;
+        }
+        $("#pingapi").attr("disabled","disabled");
+        $("#pingapi").html('<img src="/static/img/button.gif" style="width:28px;height:16px;"/>');
+        $.getJSON("/salt/api/ping/",{'tgt':tgt,'datacenter':datacenter}, function(ret){
+            if (ret.hasOwnProperty('errors')) {
+                alert(ret.errors);
+                $("#pingapi").removeAttr("disabled");
+                $("#pingapi").html("提交");
+                return false;
+            } else {
+                if (ret.info.unrecv_count===0) {
+                    $('#info').html("本次执行对象共"+ret.info.send_count+"台，其中"+ret.info.recv_count+"台返回结果;"
+                      );
+                } else {
+                    $('#info').html("本次执行对象共" + ret.info.send_count + "台，其中" + ret.info.recv_count + "台返回结果；未返回结果的有以下" + ret.info.unrecv_count + "台：<br/>" + ret.info.unrecv_strings
+                      );
+                }
+                    var sortArray = [];
+                $.each(ret.result, function(key, val) { sortArray[sortArray.length] = key;});
+                sortArray.sort();
+                $.each(sortArray, function(i, key) {
+                    $("#result").append(
+                            "<hr/><p class='bg-info'><b>" + key + "</b></p><pre>"+ret['result'][key]['cont']+"</pre>"
+                    );
+                });
+            };
+            $("#pingapi").removeAttr("disabled");
+            $("#pingapi").html("提交");
+        });
+    });
+    // $.ajaxSettings.async = true;
+}

@@ -33,7 +33,7 @@ class SaltAPI(object):
         content = json.loads(opener.read())
         return content
 
-    def asyncMasterToMinion(self, tgt, fun, arg):
+    def asyncMasterToMinion(self, tgt, fun, arg=None):
         '''
         异步执行，当target为部分minion时，Master操作Minion；
         :param target: 目标服务器ID组成的字符串；
@@ -41,8 +41,12 @@ class SaltAPI(object):
         :param arg: 传入的命令或sls文件
         :return: jid字符串
         '''
-        if tgt == '*':
+        if not arg and tgt == '*':
+            params = {'client': 'local_async', 'tgt': tgt, 'fun': fun}
+        elif arg and tgt == '*':
             params = {'client': 'local_async', 'tgt': tgt, 'fun': fun, 'arg': arg}
+        elif not arg:
+            params = {'client': 'local_async', 'tgt': tgt, 'fun': fun, 'expr_form': 'list'}
         else:
             params = {'client': 'local_async', 'tgt': tgt, 'fun': fun, 'arg': arg, 'expr_form': 'list'}
         obj = urllib.urlencode(params)

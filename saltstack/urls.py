@@ -12,6 +12,8 @@ urlpatterns = patterns(
     url(r'^deploy/$', 'deployProgram', name='deploy'),
     url(r'^update/$', 'updateConfig', name='update'),
     url(r'^routine/$', 'routineMaintenance', name='routine'),
+    url(r'^ping/$', 'pingTest', name='ping'),
     url(r'^api/execute/$', 'remoteExecuteApi', name='execute_api'),
     url(r'^api/deploy/$', 'deployProgramApi', name='deploy_api'),
+    url(r'^api/ping/$', 'pingTestApi', name='ping_api'),
 )
