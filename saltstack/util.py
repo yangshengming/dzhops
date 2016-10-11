@@ -471,9 +471,6 @@ def outFormatSsh(result):
         trueStatus = 0
         liv = []
 
-        minion_data = HostList.objects.get(minionid=ka)
-        minion_ip = minion_data.ip
-
         if isinstance(va, dict):
             for kva in va['return'].keys():
                 # kva mo_watch,...
@@ -556,11 +553,11 @@ def outFormatSsh(result):
 
             valcon['status'] = colour
             valcon['cont'] = longstrva
-            unret[minion_ip] = valcon
+            unret[ka] = valcon
         else:
             valcon['status'] = 'False'
             valcon['cont'] = str(va)
-            unret[minion_ip] = valcon
+            unret[ka] = valcon
 
     # 结果排序工作改为由前端处理，此处注释
     # result_keys_list = unret.keys()
