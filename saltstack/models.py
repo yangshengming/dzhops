@@ -63,6 +63,18 @@ class CommonOperate(models.Model):
         return u'%s %s' % (self.slsfile, self.module)
 
 
+class SshModules(models.Model):
+    '''
+    ssh操作sls文件表;
+    '''
+    slsfile = models.CharField(
+        max_length=255, blank=True, verbose_name=u'sls文件')
+    module = models.CharField(max_length=30, blank=True, verbose_name=u'模块名称')
+
+    def __unicode__(self):
+        return u'%s %s' % (self.slsfile, self.module)
+
+
 class Jids(models.Model):
     jid = models.CharField(primary_key=True, max_length=255)
     load = models.TextField()

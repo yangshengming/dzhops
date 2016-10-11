@@ -365,3 +365,108 @@ function saltPing() {
     });
     // $.ajaxSettings.async = true;
 }
+
+
+function saltSsh() {
+    //$.ajaxSettings.async = false;
+    $(document).ready(function(){
+        $("#info").html("");
+        $("#result").html("");
+        var tgt = $("input[name='tgt']").val();
+        var arg = "";
+        $("input[name='sls']:checked").each(function(){
+            arg = $(this).val();
+        });
+        if (tgt === '' || tgt === null) {
+            alert('请输入服务器IP或主机名');
+            return false;
+        };
+        if (arg === '' || arg === null) {
+            alert('请选择将要进行的操作！');
+            return false;
+        };
+        $("#salt_ssh").attr("disabled","disabled");
+        $("#salt_ssh").html('<img src="/static/img/button.gif" style="width:28px;height:16px;"/>');
+        $.getJSON("/salt/api/ssh/", {"tgt":tgt, "sls":arg}, function(ret){
+            if (ret.hasOwnProperty("errors")) {
+                alert(ret.errors);
+                $("#salt_ssh").removeAttr("disabled");
+                $("#salt_ssh").html("提交");
+                return false;
+            } else {
+                if (ret.info.unrecv_count === 0) {
+                    $("#info").html('\
+                        <hr/>本次执行对象'+ret.info.send_count+'台，\
+                        共'+ret.info.recv_count+'台返回结果，\
+                        其中成功'+ret.info.succeed+'台，\
+                        失败'+ret.info.failed+'台；<hr/>'
+                    );
+                } else {
+                    $("#info").html('\
+                        <hr/>本次执行对象'+ret.info.send_count+'台，\
+                        共'+ret.info.recv_count+'台返回结果，\
+                        其中成功'+ret.info.succeed+'台，\
+                        失败'+ret.info.failed+'台；\
+                        未返回结果的有以下'+ret.info.unrecv_count+'台:\
+                        <br/>'+ ret.info.unrecv_strings+';<hr/>'
+                    );
+                }
+            }
+            var sortArray = [];
+            $.each(ret.result, function(key, value) {
+                sortArray[sortArray.length] = key;
+            });
+            sortArray.sort();
+            $.each(sortArray, function(i, key) {
+                var ip_nodot = key.replace(/\./g,'');
+                if (ret['result'][key]['status'] === 'True') {
+                    $("#result").append('\
+                        <div class="col-md-3" style="margin-bottom:5px">\
+                            <button type="button" class="btn btn-info btn-block" data-toggle="modal" data-target="#'+ip_nodot+'">'+key+'</button>\
+                        </div>\
+                        <div class="modal fade bs-example-modal-lg" id="'+ip_nodot+'" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">\
+                          <div class="modal-dialog modal-lg">\
+                            <div class="modal-content">\
+                              <div class="modal-header">\
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>\
+                                <h4 class="modal-title" id="myModalLabel">'+key+'</h4>\
+                              </div>\
+                              <div class="modal-body">\
+                                <pre>'+ret['result'][key]['cont']+'</pre>\
+                              </div>\
+                              <div class="modal-footer">\
+                                <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>\
+                              </div>\
+                            </div>\
+                          </div>\
+                        </div>'
+                    );
+                } else {
+                    $("#result").append('\
+                        <div class="col-md-3" style="margin-bottom:5px">\
+                            <button type="button" class="btn btn-danger btn-block" data-toggle="modal" data-target="#'+ip_nodot+'">'+key+'</button>\
+                        </div>\
+                        <div class="modal fade bs-example-modal-lg" id="'+ip_nodot+'" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">\
+                          <div class="modal-dialog modal-lg">\
+                            <div class="modal-content">\
+                              <div class="modal-header">\
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>\
+                                <h4 class="modal-title" id="myModalLabel">'+key+'</h4>\
+                              </div>\
+                              <div class="modal-body">\
+                                <pre>'+ret['result'][key]['cont']+'</pre>\
+                              </div>\
+                              <div class="modal-footer">\
+                                <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>\
+                              </div>\
+                            </div>\
+                          </div>\
+                        </div>');
+                };
+            });
+            $("#salt_ssh").removeAttr("disabled");
+            $("#salt_ssh").html("提交");
+        });
+    });
+    //$.ajaxSettings.async = true;
+}

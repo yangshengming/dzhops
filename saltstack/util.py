@@ -415,3 +415,179 @@ def manageResult(send_ids_set, recv_ips_list):
         info_values = [send_ids_count, recv_ips_count, unrecv_count, unrecv_strings]
         send_recv_info = dict(zip(info_keys, info_values))
     return send_recv_info
+
+def saltSsh(tgt, fun, arg):
+    from salt.client.ssh.client import SSHClient
+    client = SSHClient()
+    return client.cmd(tgt=tgt, fun=fun, arg=arg)
+
+def outFormatSsh(result):
+    '''
+    将从数据中获取到的结果，进行格式化输出;
+    :param result:
+        #result = {
+        # 'zhaogb-201':
+        #   {'file_|-info_so_1_|-/usr/lib64/libodbc.so.1_|-managed':
+        #       {'comment': 'zhaogb-201', 'name': '/usr/lib64/libodbc.so.1',
+        #           'start_time': 'zhaogb-201',
+        #           'result': True,
+        #           'duration': 'zhaogb-201',
+        #           '__run_num__': 2,
+        #           'changes': {}
+        #       }
+        #   },
+        # 'zhaogb-202':
+        #    {'file_|-info_so_1_|-/usr/lib64/libodbc.so.1_|-managed':
+        #       {'comment': 'zhaogb-202',
+        #           'name': 'zhaogb-202',
+        #           'start_time': 'zhaogb-202',
+        #           'result': True,
+        #           'duration': 'zhaogb-202',
+        #           '__run_num__': 2,
+        #           'changes':
+        #               {'diff': 'New file',
+        #               'mode': '0644'
+        #               }
+        #       }
+        #    }
+        # }
+    :return: 多维列表，形如：[
+                            [ip1', {'status': value1, 'cont': longstrings1}],
+                            [ip2', {'status': value2, 'cont': longstrings2}],
+                            ... ...
+                           ]
+    '''
+    hostfa = 0
+    hosttr = 0
+    unret = {}
+
+    for ka, va in result.iteritems():
+        # result {'zhaogb-201':{},'zhaogb-202':{}}
+        # ka zhaogb-201,zhaogb-202
+        # va {'mo_watch':{'comment':'','result':'',...}}
+        valcon = {}
+        longstrva = ''
+        falseStatus = 0
+        trueStatus = 0
+        liv = []
+
+        minion_data = HostList.objects.get(minionid=ka)
+        minion_ip = minion_data.ip
+
+        if isinstance(va, dict):
+            for kva in va['return'].keys():
+                # kva mo_watch,...
+                liva = kva.split('_|-')
+                liv.append(va['return'][kva]['result'])
+
+                if va['return'][kva]['changes']:
+                    changesStr = ''
+                    if liva[0] == 'file':
+                        if va['return'][kva]['changes'].keys():
+                            if ('diff' in va['return'][kva]['changes'].keys()
+                                and va['return'][kva]['changes']['diff'] != ''):
+                                changesStr += u'\n\t对比 : \n\t\t{0}'.format(
+                                    va['return'][kva]['changes']['diff'])
+                            if ('mode' in va[kva]['changes'].keys()
+                                and va['return'][kva]['changes']['mode'] != ''):
+                                changesStr += u'\n\t权限 : \n\t\t{0}'.format(
+                                    va['return'][kva]['changes']['mode'])
+                            if ('diff' not in va['return'][kva]['changes'].keys()
+                                and 'mode' not in va['return'][kva]['changes'].keys()):
+                                for ck, cv in va['return'][kva]['changes'].iteritems():
+                                    changesStr += u'\n\t{0}'.format(ck)
+                                    if ('diff' in va['return'][kva]['changes'][ck].keys()
+                                        and va['return'][kva]['changes'][ck]['diff'] != ''):
+                                        changesStr += u'\n\t\t对比 : \n\t\t\t{0}'.format(cv['diff'])
+                                    if ('mode' in va['return'][kva]['changes'][ck].keys()
+                                        and va['return'][kva]['changes'][ck]['mode'] != ''):
+                                        changesStr += u'\n\t\t权限 : \n\t\t\t{0}'.format(cv['mode'])
+
+                    elif liva[0] == 'cmd':
+                        if ('pid' in va['return'][kva]['changes'].keys()
+                            and va['return'][kva]['changes']['pid'] != ''):
+                            changesStr += u'\n\tPID : {0}'.format(va['return'][kva]['changes']['pid'])
+                        if ('retcode' in va['return'][kva]['changes'].keys()
+                            and va['return'][kva]['changes']['retcode'] != ''):
+                            changesStr += u'\n\t返回代码 : {0}'.format(va['return'][kva]['changes']['retcode'])
+                        if ('stderr' in va['return'][kva]['changes'].keys()
+                            and va['return'][kva]['changes']['stderr'] != ''):
+                            changesStr += u'\n\t错误 : {0}'.format(va['return'][kva]['changes']['stderr'])
+                        if ('stdout' in va['return'][kva]['changes'].keys()
+                            and va['return'][kva]['changes']['stdout'] != ''):
+                            changesStr += u'\n\t输出 : {0}'.format(va['return'][kva]['changes']['stdout'])
+                    else:
+                        pass
+                    va['return'][kva]['changes'] = changesStr.encode('utf8')
+                else:
+                    pass
+
+                strva = '结果 : {0}\n标签 : {1}\n操作 : {2}\n开始 : {3}\n耗时 : {4} ms\n变动 : {5}\n{6}\n'.format(
+                    va['return'][kva]['result'],
+                    liva[1],
+                    va['return'][kva]['comment'],
+                    va['return'][kva]['start_time'],
+                    va['return'][kva]['duration'],
+                    va['return'][kva]['changes'],
+                    '-' * 60)
+                longstrva += strva
+
+            if False in liv:
+                colour = 'False'
+                hostfa += 1
+            elif True in liv:
+                colour = 'True'
+                hosttr += 1
+            else:
+                pass
+                # error write to logging
+
+            totalStatus = len(liv)
+            for livStatus in liv:
+                if livStatus == False:
+                    falseStatus += 1
+                elif livStatus == True:
+                    trueStatus += 1
+                else:
+                    pass
+                    # error write to logging
+
+            longstrva += '失败 : {0}\n成功 : {1}\n总计 : {2}'.format(falseStatus, trueStatus, totalStatus)
+
+            valcon['status'] = colour
+            valcon['cont'] = longstrva
+            unret[minion_ip] = valcon
+        else:
+            valcon['status'] = 'False'
+            valcon['cont'] = str(va)
+            unret[minion_ip] = valcon
+
+    # 结果排序工作改为由前端处理，此处注释
+    # result_keys_list = unret.keys()
+    # result_keys_list.sort()
+    # log.debug('Result keys list sorted: {0}'.format(str(result_keys_list)))
+    # for ip in result_keys_list:
+    #     content = unret.get(ip)
+    #     sub_list = [ip, content]
+    #     result.append(sub_list)
+
+    return unret, hostfa, hosttr
+
+
+def manageResultSsh(send_ids_set, recv_ids_list):
+    '''
+    计算目标客户端数量，回收结果数量，未返回结果的数量，未返回结果的IP列表；
+    :param send_ids_set:
+    :param recv_ips_list:
+    :return: {digit, digit, digit, strings}
+    '''
+    diff_ip_list = []
+    info_keys = ('send_count', 'recv_count', 'unrecv_count', 'unrecv_strings')
+    send_ids_count = len(send_ids_set)
+    recv_ids_count = len(recv_ids_list)
+    unrecv_count = send_ids_count - recv_ids_count
+    diff_set = send_ids_set.difference(set(recv_ids_list))
+    unrecv_strings = ', '.join(list(diff_set))
+    info_values = [send_ids_count, recv_ids_count, unrecv_count, unrecv_strings]
+    send_recv_info = dict(zip(info_keys, info_values))
+    return send_recv_info

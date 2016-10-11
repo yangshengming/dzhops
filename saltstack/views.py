@@ -5,10 +5,10 @@ from django.contrib.auth.decorators import login_required
 
 from hostlist.models import DataCenter
 from record.models import OperateRecord, ReturnRecord
-from saltstack.models import DangerCommand, DeployModules, ConfigUpdate, CommonOperate
+from saltstack.models import DangerCommand, DeployModules, ConfigUpdate, CommonOperate, SshModules
 from saltstack.saltapi import SaltAPI
 from saltstack.util import targetToMinionID, datacenterToMinionID, findJob, mysqlReturns, outFormat, manageResult, \
-    moduleDetection, moduleLock, moduleUnlock
+    moduleDetection, moduleLock, moduleUnlock, saltSsh, outFormatSsh, manageResultSsh
 from dzhops import settings
 
 import logging, json, time, copy
@@ -535,6 +535,93 @@ def pingTestApi(request):
                 log.info('The all target minion id set is Null.')
                 set_null = u'数据库中没有找到输入的主机，请确认输入是否正确！'
                 result_dict['errors'] = set_null.encode('utf-8')
+    ret_json = json.dumps(result_dict)
+
+    return HttpResponse(ret_json, content_type='application/json')
+
+@login_required
+def sshExecute(request):
+    '''
+    使用salt ssh方式登录操作，可以初始化salt集群及其他操作;
+    :param request:
+    :return:
+    '''
+    user = request.user.username
+    sls_list = []
+    sls_mod_dict = {}
+
+    result_sls = SshModules.objects.all()
+    for row_data in result_sls:
+        sls_mod_dict[row_data.slsfile] = row_data.module
+        sls_list.append(row_data.slsfile)
+    sls_list.sort()
+
+    return render(
+        request,
+        'salt_ssh.html',
+        {
+            'sls_list': sls_list,
+            'sls_mod_dict': sls_mod_dict
+        }
+    )
+
+@login_required
+def sshExecuteApi(request):
+    '''
+    测试连接功能，前端页面提交的数据由该函数处理，执行完毕后返回json格式数据到api；
+    :param request:
+    :return:
+    '''
+    user = request.user.username
+    salt_module = 'state.sls'
+    get_errors = []
+    errors = []
+    result_dict = {}
+
+    if request.method == 'GET':
+        check_tgt = request.GET.get('tgt', '')
+        check_arg = request.GET.get('sls', '')
+
+        module_detection = moduleDetection(salt_module, user)
+
+        if module_detection:
+            get_errors.append(module_detection)
+            log.debug('{0}'.format(str(module_detection)))
+        if not check_arg:
+            get_errors.append(u'请选择将要进行的操作！')
+            log.error('Not select the file of salt state.')
+
+        if get_errors:
+            for error in get_errors:
+                errors.append(error.encode('utf-8'))
+            result_dict['errors'] = errors
+        else:
+            tgt = request.GET.get('tgt', '')
+            arg = request.GET.get('sls', '').encode().split()
+            target_list = tgt.split(',')
+
+            if '*' in target_list:
+                result = saltSsh('*', salt_module, arg)
+            else:
+                tgt_list_to_str = ','.join(target_list)
+                result = saltSsh(tgt_list_to_str, salt_module, arg)
+            ret, hostfa, hosttr = outFormatSsh(result)
+
+            # log.debug(str(ret))
+            recv_ips_list = ret.keys()
+            send_recv_info = manageResultSsh(set(target_list), recv_ips_list)
+            send_recv_info['succeed'] = hosttr
+            send_recv_info['failed'] = hostfa
+            saveRecord = ReturnRecord.objects.create(
+                tgt_total=send_recv_info['send_count'],
+                tgt_ret=send_recv_info['recv_count'],
+                tgt_succ=send_recv_info['succeed'],
+                tgt_fail=send_recv_info['failed'],
+                tgt_unret=send_recv_info['unrecv_count'],
+                tgt_unret_list=send_recv_info['unrecv_strings']
+            )
+            result_dict['result'] = ret
+            result_dict['info'] = send_recv_info
     ret_json = json.dumps(result_dict)
 
     return HttpResponse(ret_json, content_type='application/json')

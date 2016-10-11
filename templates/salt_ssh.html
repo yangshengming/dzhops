@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}模块更新-移动终端自动化运维平台{% endblock %}
+{% block title %}模块部署-移动终端自动化运维平台{% endblock %}
 {% block nav %}
     <li><a href="{% url 'index' %}"><i class="glyphicon glyphicon-dashboard"></i> 仪表盘</a></li>
     <li><a href="{% url 'asset_list' %}"><i class="glyphicon glyphicon-th-list"></i> 主机列表</a></li>
@@ -12,15 +12,15 @@
     <h5 class="page-header">
         <ol class="breadcrumb">
             <li><a href="{% url 'deploy' %}">模块部署</a></li>
-            <li class="active">配置更新</li>
+            <li><a href="{% url 'update' %}">配置更新</a></li>
             <li><a href="{% url 'routine' %}">日常维护</a></li>
             <li><a href="{% url 'execute' %}">远程操作</a></li>
             <li><a href="{% url 'ping' %}">测试连接</a></li>
-            <li><a href="{% url 'ssh' %}">ssh操作</a></li>
+            <li class="active">ssh操作</li>
         </ol>
     </h5>
    <div class="row">
-        <form class="form-horizontal form-border" method="get" enctype="multipart/form-data" action="{% url 'deploy_api' %}">
+        <form class="form-horizontal form-border" method="get" enctype="multipart/form-data" action="{% url 'ssh_api' %}">
             <div class="col-sm-10 col-sm-offset-1">
                 <div class="panel panel-default">
                     <div class="panel-body">
@@ -31,48 +31,27 @@
                             </div>
                         </div>
                         <div class="form-group">
-                            <label class="col-sm-1 control-label">机房</label>
-                            <div class="col-sm-10">
-                                <div class="col-sm-2">
-                                    <label class="checkbox-inline">
-                                    <input class="icheck" type="checkbox" value="*" name="datacenter">全部
-                                    </label>
-                                </div>
-                                {% for dcen_li in dcen_list %}
-                                    {% for dcen,dccn in data_centers.iteritems %}
-                                        {% if dcen == dcen_li %}
-                                            <div class="col-sm-2">
-                                                <label class="checkbox-inline">
-                                                    <input class="icheck" type="checkbox" value="{{ dcen }}" name="datacenter">{{ dccn }}
-                                                </label>
-                                            </div>
-                                        {% endif %}
-                                    {% endfor %}
-                                {% endfor %}
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="col-sm-1 control-label">配置</label>
-                            <div class="col-sm-10">
-                                {% for sls in sls_list %}
+                              <label class="col-sm-1 control-label">程序</label>
+                              <div class="col-sm-10">
+                                  {% for sls in sls_list %}
                                     {% for sls_key,mod in sls_mod_dict.iteritems %}
                                         {% if sls == sls_key %}
                                             <div class="col-sm-2">
                                                 <label class="radio-inline">
-                                                    <input class="icheck" type="radio"  value="{{ sls }}" name="sls">{{ mod }}
+                                                  <input class="icheck" type="radio"  value="{{ sls }}" name="sls">{{ mod }}
                                                 </label>
                                             </div>
                                         {% endif %}
                                     {% endfor %}
-                                {% endfor %}
-                            </div>
+                                  {% endfor %}
+                              </div>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="form-group">
                  <div class="col-sm-offset-9 col-sm-1">
-                     <button type="button" class="btn btn-primary" onclick="saltFunc()" id="salt_submit">提交</button>
+                     <button type="button" class="btn btn-primary" onclick="saltSsh()" id="salt_ssh">提交</button>
                  </div>
             </div>
             <div class="col-sm-10 col-sm-offset-1">
