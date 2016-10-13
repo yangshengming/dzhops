@@ -5,6 +5,7 @@ from saltstack.models import SaltReturns
 from saltstack.models import ModulesLock
 from saltstack.saltapi import SaltAPI
 from dzhops import settings
+from salt.exceptions import SaltSystemExit
 
 import logging, time, json, re
 
@@ -419,7 +420,16 @@ def manageResult(send_ids_set, recv_ips_list):
 def saltSsh(tgt, fun, arg):
     from salt.client.ssh.client import SSHClient
     client = SSHClient()
-    return client.cmd(tgt=tgt, fun=fun, arg=arg)
+    errors = []
+    res = {}
+    try:
+        res = client.cmd(tgt=tgt, fun=fun, arg=arg)
+    except SaltSystemExit:
+        err_msg = 'No hosts found with target {0}'.format(tgt) 
+        log.error(err_msg)
+        errors.append(err_msg)
+        res['errors']=errors
+    return res
 
 def outFormatSsh(result):
     '''
