@@ -27,7 +27,13 @@
                         <div class="form-group">
                             <label class="col-sm-1 control-label">主机</label>
                             <div class="col-sm-10">
-                                <input type="text" class="form-control" name="tgt" value={{ tgt }}>
+                                <select class="form-control">
+                                        <option type='radio' name='tgt' value=''>请选择
+主机</option>
+                                    {% for tgt in tgt_list %}
+                                        <option type='radio' name="tgt" value="{{ tgt }}">{{ tgt }}</option>
+                                    {% endfor %}
+                                </select>
                             </div>
                         </div>
                         <div class="form-group">

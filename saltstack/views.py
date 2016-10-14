@@ -3,7 +3,7 @@ from django.shortcuts import render
 from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required
 
-from hostlist.models import DataCenter
+from hostlist.models import DataCenter, HostList
 from record.models import OperateRecord, ReturnRecord
 from saltstack.models import DangerCommand, DeployModules, ConfigUpdate, CommonOperate, SshModules
 from saltstack.saltapi import SaltAPI
@@ -34,6 +34,7 @@ def deployProgram(request):
     sls_list = []
     data_centers = {}
     sls_mod_dict = {}
+    tgt_list = []
 
     result_dc = DataCenter.objects.all()
     for dc in result_dc:
@@ -47,10 +48,16 @@ def deployProgram(request):
         sls_list.append(row_data.slsfile)
     sls_list.sort()
 
+    host_result = HostList.objects.all()
+    for host in host_result:
+        tgt_list.append(host.hostname)
+    tgt_list.sort()
+
     return render(
         request,
         'salt_deploy.html',
         {
+            'tgt_list': tgt_list,
             'dcen_list': dcen_list,
             'data_centers': data_centers,
             'sls_list': sls_list,
@@ -70,6 +77,7 @@ def updateConfig(request):
     data_centers = {}
     sls_list = []
     sls_mod_dict = {}
+    tgt_list = []
 
     result_dc = DataCenter.objects.all()
     for dc in result_dc:
@@ -83,10 +91,16 @@ def updateConfig(request):
         sls_list.append(row_data.slsfile)
     sls_list.sort()
 
+    host_result = HostList.objects.all()
+    for host in host_result:
+        tgt_list.append(host.hostname)
+    tgt_list.sort()
+
     return render(
         request,
         'salt_update.html',
         {
+            'tgt_list': tgt_list,
             'dcen_list': dcen_list,
             'data_centers': data_centers,
             'sls_list': sls_list,
@@ -106,6 +120,7 @@ def routineMaintenance(request):
     data_centers = {}
     sls_list = []
     sls_mod_dict = {}
+    tgt_list = []
 
     result_dc = DataCenter.objects.all()
     for dc in result_dc:
@@ -118,10 +133,16 @@ def routineMaintenance(request):
         sls_mod_dict[row_data.slsfile] = row_data.module
         sls_list.append(row_data.slsfile)
 
+    host_result = HostList.objects.all()
+    for host in host_result:
+        tgt_list.append(host.hostname)
+    tgt_list.sort()
+
     return render(
         request,
         'salt_routine.html',
         {
+            'tgt_list': tgt_list,
             'dcen_list': dcen_list,
             'data_centers': data_centers,
             'sls_list': sls_list,
@@ -257,6 +278,7 @@ def remoteExecute(request):
     user = request.user.username
     dcen_list = []
     data_centers = {}
+    tgt_list = []
 
     result_dc = DataCenter.objects.all()
     for dc in result_dc:
@@ -264,10 +286,19 @@ def remoteExecute(request):
         data_centers[dc.dcen] = dc.dccn
     dcen_list.sort()
 
+    host_result = HostList.objects.all()
+    for host in host_result:
+        tgt_list.append(host.hostname)
+    tgt_list.sort()
+
     return render(
         request,
         'salt_execute.html',
-        {'dcen_list': dcen_list, 'data_centers': data_centers}
+        {
+            'tgt_list': tgt_list,
+            'dcen_list': dcen_list,
+            'data_centers': data_centers
+        }
     )
 
 
@@ -413,6 +444,7 @@ def pingTest(request):
     user = request.user.username
     dcen_list = []
     data_centers = {}
+    tgt_list = []
 
     result_dc = DataCenter.objects.all()
     for dc in result_dc:
@@ -420,10 +452,19 @@ def pingTest(request):
         data_centers[dc.dcen] = dc.dccn
     dcen_list.sort()
 
+    host_result = HostList.objects.all()
+    for host in host_result:
+        tgt_list.append(host.hostname)
+    tgt_list.sort()
+
     return render(
         request,
         'salt_ping.html',
-        {'dcen_list': dcen_list, 'data_centers': data_centers}
+        {
+            'tgt_list': tgt_list,
+            'dcen_list': dcen_list,
+            'data_centers': data_centers
+        }
     )
 
 @login_required

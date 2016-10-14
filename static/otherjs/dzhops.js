@@ -54,7 +54,7 @@ function saltExecute() {
     $(document).ready(function(){
         $('#result').html("");
         $('#info').html("")
-        var tgt = $("input[name='tgt']").val();
+        var tgt = $("option[name='tgt']:selected").val();
         var arg = $("input[name='arg']").val();
         var datacenter = "";
         $('input[name="datacenter"]:checked').each(function(){
@@ -105,7 +105,7 @@ function saltFunc() {
     $(document).ready(function(){
         $("#info").html("");
         $("#result").html("");
-        var tgt = $("input[name='tgt']").val();
+        var tgt = $("option[name='tgt']:selected").val();
         var datacenter = "";
         var arg = "";
         $("input[name='datacenter']:checked").each(function(){
@@ -325,7 +325,7 @@ function saltPing() {
     $(document).ready(function(){
         $('#result').html("");
         $('#info').html("")
-        var tgt = $("input[name='tgt']").val();
+        var tgt = $("option[name='tgt']:selected").val();
         var datacenter = "";
         $('input[name="datacenter"]:checked').each(function(){
             datacenter += $(this).val() + ',';
