@@ -77,6 +77,7 @@ DATABASES = {
     }
 }
 
+CACHE_BACKEND = 'memcached://172.16.214.102:11211/'
 # Internationalization
 # https://docs.djangoproject.com/en/1.6/topics/i18n/
 

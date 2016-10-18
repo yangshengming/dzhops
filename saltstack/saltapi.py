@@ -20,7 +20,9 @@ class SaltAPI(object):
         opener = urllib2.urlopen(req)
         content = json.loads(opener.read())
         try:
-            token = content['return'][0]['token']
+            from django.core.cache import cache
+            cache.set(self.__user, content['return'][0]['token'])
+            token = cache.get(self.__user)
             return token
         except KeyError:
             raise KeyError
