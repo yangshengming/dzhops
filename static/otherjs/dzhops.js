@@ -470,3 +470,29 @@ function saltSsh() {
     });
     //$.ajaxSettings.async = true;
 }
+
+function tgtCheck() {
+    $(document).ready(function(){
+        $("#check").html("");
+        var tgt = $("input[name='tgt']").val();
+        var col = 'acp';
+        var dcen = 'DC_ALL';
+        var engi = 'EG_ALL';
+        var num = 0;
+        $.getJSON("/keys/api/", {"col": col, "dcen": dcen, "engi": engi}, function(result) {
+            $.each(result, function(index, value) {
+                $.each(value, function(ip, id) {
+                    if (tgt === ip || tgt === id) {
+                        num++;
+                    }
+                });
+            });
+            if (num > 0) {
+                $("#check").append('已经存在');
+            }
+            else {
+                $("#check").append('还未存在');
+            }
+        });
+    });
+}
